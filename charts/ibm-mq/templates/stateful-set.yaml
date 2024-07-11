@@ -281,12 +281,12 @@ spec:
             In our case we want to explicitly set if it is NOT unset, hence the reason for the complex IF
             statement.
           */}}
-          {{- range $index, $source := .Values.queueManager.envVariables }}
-          - name: {{ $source.name }}
+          {{- range .Values.queueManager.envVariables }}
+          - name: {{ .name }}
             valueFrom:
               secretKeyRef:
-                name: {{ $source.valueFrom.secretKeyRef.name }}
-                key: {{ $source.valueFrom.secretKeyRef.key }}
+                name: {{ .valueFrom.secretKeyRef.name }}
+                key: {{ .valueFrom.secretKeyRef.key }}
           {{- end }}
           {{- if or .Values.web.enable (eq .Values.web.enable false)}}
           - name: MQ_ENABLE_EMBEDDED_WEB_SERVER
