@@ -316,6 +316,13 @@ spec:
           - name: MQ_GRACE_PERIOD
             value: "{{sub .Values.queueManager.terminationGracePeriodSeconds 1}}"
           {{- range $index, $source := .Values.queueManager.envVariables }}
+          {{- range .Values.queueManager.envVariables }}
+          - name: {{ .name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ .valueFrom.secretKeyRef.name }}
+                key: {{ .valueFrom.secretKeyRef.key }}
+          {{- end }}
           - name: {{ $source.name }}
             value: "{{ $source.value }}"
           {{- end }}
