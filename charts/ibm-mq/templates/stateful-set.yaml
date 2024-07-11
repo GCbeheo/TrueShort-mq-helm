@@ -281,16 +281,6 @@ spec:
             In our case we want to explicitly set if it is NOT unset, hence the reason for the complex IF
             statement.
           */}}
-          - name: MQ_ADMIN_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mq-secrets
-                key: mq-admin-password
-          - name: MQ_APP_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mq-secrets
-                key: mq-app-password
           {{- if or .Values.web.enable (eq .Values.web.enable false)}}
           - name: MQ_ENABLE_EMBEDDED_WEB_SERVER
             value: "{{ .Values.web.enable | default false }}"
