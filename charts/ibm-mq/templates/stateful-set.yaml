@@ -281,16 +281,6 @@ spec:
             In our case we want to explicitly set if it is NOT unset, hence the reason for the complex IF
             statement.
           */}}
-          - name: MQ_ADMIN_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mq-secrets
-                key: mq-admin-password
-          - name: MQ_APP_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: mq-secrets
-                key: mq-app-password
           {{- if or .Values.web.enable (eq .Values.web.enable false)}}
           - name: MQ_ENABLE_EMBEDDED_WEB_SERVER
             value: "{{ .Values.web.enable | default false }}"
@@ -327,7 +317,14 @@ spec:
             value: "{{sub .Values.queueManager.terminationGracePeriodSeconds 1}}"
           {{- range $index, $source := .Values.queueManager.envVariables }}
           - name: {{ $source.name }}
+            {{- if $source.value }}
             value: "{{ $source.value }}"
+            {{- else if $source.valueFrom }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ $source.valueFrom.secretKeyRef.name }}
+                key: {{ $source.valueFrom.secretKeyRef.key }}
+            {{- end }}
           {{- end }}
           {{- if .Values.queueManager.nativeha.tls }}
           {{- if (.Values.queueManager.nativeha.tls.secretName) }}
