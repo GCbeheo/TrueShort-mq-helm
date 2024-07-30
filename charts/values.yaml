@@ -4,7 +4,7 @@ image:
   tag: 9.3.5.0-r1
   pullPolicy: IfNotPresent
 queueManager:
-  name: "KSL-NONPROD-MQ1"
+  name: "KSL-NONPROD-MQ2"
   nativeha:
     enable: false
   mqscConfigMaps:
