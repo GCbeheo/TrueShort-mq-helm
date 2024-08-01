@@ -1,0 +1,61 @@
+license: "accept"
+image:
+  repository: icr.io/ibm-messaging/mq
+  tag: 9.3.5.0-r1
+  pullPolicy: IfNotPresent
+queueManager:
+  name: "KSL-NONPROD-MQ2"
+  nativeha:
+    enable: false
+  mqscConfigMaps:
+    - name: helmsecure
+      items:
+        - mq.mqsc
+  qminiConfigMaps:
+    - name: helmsecure
+      items:
+        - mq.ini
+  envVariables:
+    - name: MQ_ADMIN_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: mq-secrets
+          key: mq-admin-password
+    - name: MQ_APP_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: mq-secrets
+          key: mq-app-password
+persistence:
+  qmPVC:
+    enable: true
+    name: "qm"
+    size: 1Gi
+    storageClassName: nfs-client
+security:
+  context:
+    fsGroup: 0
+pki:
+  keys:
+    - name: default
+      secret:
+        secretName: helmsecure
+        items:
+          - tls.key
+          - tls.crt
+  trust:
+    - name: default
+      secret:
+        secretName: helmsecure
+        items:
+          - app.crt
+metadata:
+  annotations:
+    productName: "IBM MQ Advanced for Developers"
+    productID: "2f886a3eefbe4ccb89b2adb97c78b9cb"
+    productChargedContainers: ""
+    productMetric: "FREE"
+route:
+  nodePort:
+    webconsole: true
+    mqtraffic: true
