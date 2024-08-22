@@ -254,6 +254,38 @@ spec:
         - name: qmgr
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          lifecycle:
+            postStart:
+              exec:
+                command: 
+                  - /bin/sh
+                  - -c
+                  - |
+                    # Wait for the MQ queue manager to be fully initialized
+                    while ! echo "DISPLAY QMSTATUS" | runmqsc $QMGR | grep -q "QMSTATUS"; do
+                      echo "Waiting for the queue manager to start..."
+                      sleep 10
+                    done
+
+                    # Create and run the channel monitoring script
+                    echo "#!/bin/bash
+                    CHANNELS=(\"EQLSG1Q1.KSL.C1\" \"EQLSG1Q1.KSL.C2\" \"EQLSG2Q1.KSL.C1\" \"EQLSG2Q1.KSL.C2\")
+                    echo \"Starting channel monitoring...\"
+                    for CHANNEL in \"\${CHANNELS[@]}\"; do
+                        OUTPUT=\$(echo \"DISPLAY CHSTATUS(\$CHANNEL)\" | runmqsc \$QMGR)
+                        if echo \"\$OUTPUT\" | grep -q \"AMQ8420I: Channel Status not found.\"; then
+                            echo \"Channel \$CHANNEL is inactive. Restarting...\"
+                            echo \"START CHANNEL(\$CHANNEL)\" | runmqsc \$QMGR
+                        fi
+                    done" > /var/mqm/monitor_channels.sh
+                    
+                    chmod +x /var/mqm/monitor_channels.sh
+
+                    # Run the monitoring script in a loop
+                    while true; do
+                      /bin/bash /var/mqm/monitor_channels.sh
+                      sleep 300
+                    done
           terminationMessagePath: "/run/termination-log"
           ports:
           - containerPort: 1414
