@@ -483,32 +483,13 @@ spec:
 {{ toYaml .Values.resources.limits | indent 14 }}
             requests:
 {{ toYaml .Values.resources.requests | indent 14 }}
-          lifecycle:
-            postStart:
-              exec:
-                command:
-                  - /bin/sh
-                  - -c
-                  - |
-                    echo "Starting PostStart Hook" > /tmp/poststart-debug.log 2>&1
-                    chmod 777 /tmp >> /tmp/poststart-debug.log 2>&1 || echo "Failed to chmod /tmp" >> /tmp/poststart-debug.log
-                    runmqserver >> /tmp/poststart-debug.log 2>&1 || echo "Failed to runmqserver" >> /tmp/poststart-debug.log
-                    echo "PostStart Hook Completed" >> /tmp/poststart-debug.log 2>&1
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1001
-            fsGroup: 1001
       {{- if .Values.security.initVolumeAsRoot }}
       initContainers:
         - name: qmgr-init
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           terminationMessagePath: "/run/termination-log"
-          command:
-            - sh
-            - -c
-            - |
-              chmod 777 /tmp && runmqserver -i
+          command: ["runmqserver"]
           args: ["-i"]
           env:
           - name: LICENSE
