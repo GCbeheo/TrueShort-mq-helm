@@ -490,8 +490,10 @@ spec:
                   - /bin/sh
                   - -c
                   - |
-                    echo "PostStart Hook Running" >> /tmp/poststart.log` 2>&1
-                    echo "PostStart Hook Completed" >> /tmp/poststart.log 2>&1
+                    echo "Starting PostStart Hook" > /tmp/poststart-debug.log 2>&1
+                    chmod 777 /tmp >> /tmp/poststart-debug.log 2>&1 || echo "Failed to chmod /tmp" >> /tmp/poststart-debug.log
+                    runmqserver >> /tmp/poststart-debug.log 2>&1 || echo "Failed to runmqserver" >> /tmp/poststart-debug.log
+                    echo "PostStart Hook Completed" >> /tmp/poststart-debug.log 2>&1
           securityContext:
             runAsNonRoot: true
             runAsUser: 1001
