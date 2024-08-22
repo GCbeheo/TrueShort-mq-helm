@@ -255,10 +255,6 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           terminationMessagePath: "/run/termination-log"
-          volumeMounts:
-            - name: mq-monitor-script
-              mountPath: /etc/mq-monitor/monitor_channels.sh
-              subPath: monitor_channels.sh
           ports:
           - containerPort: 1414
           - containerPort: 9443
@@ -488,6 +484,21 @@ spec:
             requests:
 {{ toYaml .Values.resources.requests | indent 14 }}
       {{- if .Values.security.initVolumeAsRoot }}
+      - name: monitoring-sidecar
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          while true; do
+            /bin/bash /var/mqm/monitor_channels.sh
+            sleep 300
+          done
+        volumeMounts:
+        - name: mq-monitoring-script
+          mountPath: /var/mqm/monitor_channels.sh
+          subPath: monitor_channels.sh
       initContainers:
         - name: qmgr-init
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -535,6 +546,10 @@ spec:
               drop:
                 - ALL
       {{- end }}
+  volumes:
+    - name: mq-monitoring-script
+      configMap:
+        name: mq-monitoring-script
   volumeClaimTemplates:
   {{- if and (.Values.persistence.dataPVC.enable) (eq .Values.queueManager.multiinstance.enable false) }}
   - metadata:
