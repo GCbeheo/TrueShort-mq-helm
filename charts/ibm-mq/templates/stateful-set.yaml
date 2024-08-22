@@ -251,6 +251,21 @@ spec:
       {{- end }}
       terminationGracePeriodSeconds: {{.Values.queueManager.terminationGracePeriodSeconds}}
       containers:
+        - name: monitoring-sidecar
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+          - /bin/sh
+          - -c
+          - |
+            while true; do
+              /bin/bash /var/mqm/monitor_channels.sh
+              sleep 300
+            done
+          volumeMounts:
+          - name: mq-monitoring-script
+            mountPath: /var/mqm/monitor_channels.sh
+            subPath: monitor_channels.sh
         - name: qmgr
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -484,21 +499,6 @@ spec:
             requests:
 {{ toYaml .Values.resources.requests | indent 14 }}
       {{- if .Values.security.initVolumeAsRoot }}
-      - name: monitoring-sidecar
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        command:
-        - /bin/sh
-        - -c
-        - |
-          while true; do
-            /bin/bash /var/mqm/monitor_channels.sh
-            sleep 300
-          done
-        volumeMounts:
-        - name: mq-monitoring-script
-          mountPath: /var/mqm/monitor_channels.sh
-          subPath: monitor_channels.sh
       initContainers:
         - name: qmgr-init
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
