@@ -492,6 +492,10 @@ spec:
                   - |
                     echo "PostStart Hook Running" >> /tmp/poststart.log` 2>&1
                     echo "PostStart Hook Completed" >> /tmp/poststart.log 2>&1
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            fsGroup: 1001
       {{- if .Values.security.initVolumeAsRoot }}
       initContainers:
         - name: qmgr-init
