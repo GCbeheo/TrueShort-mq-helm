@@ -257,15 +257,9 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              # Start the MQ queue manager in the foreground and wait for it to be fully initialized
-              runmqserver &
-              
-              # Wait until the MQ queue manager is fully running by checking for the "RUNNING" state
-              while ! echo "DISPLAY QMSTATUS($QMGR)" | runmqsc $QMGR | grep -q "RUNNING"; do
-                echo "Waiting for the queue manager to be fully initialized..."
-                sleep 10
-              done
-              
+              # Wait for a few minutes to give the MQ server enough time to start
+              sleep 180  # Adjust the time as necessary, e.g., 3 minutes
+
               # Create the channel monitoring script
               echo "#!/bin/bash
               CHANNELS=(\"EQLSG1Q1.KSL.C1\" \"EQLSG1Q1.KSL.C2\" \"EQLSG2Q1.KSL.C1\" \"EQLSG2Q1.KSL.C2\")
@@ -277,16 +271,13 @@ spec:
                         echo \"START CHANNEL(\$CHANNEL)\" | runmqsc \$QMGR
                     fi
                 done
-                sleep 300
+                sleep 300  # Repeat every 5 minutes
               done" > /var/mqm/monitor_channels.sh
-              
+
               chmod +x /var/mqm/monitor_channels.sh
-              
-              # Run the monitoring script in the background
-              /bin/bash /var/mqm/monitor_channels.sh &
-              
-              # Keep the container running indefinitely
-              wait
+
+              # Run the monitoring script
+              /bin/bash /var/mqm/monitor_channels.sh
           volumeMounts:
             - name: mq-data
               mountPath: /var/mqm
