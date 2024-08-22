@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: mq-monitoring-script
-  namespace: "{{ .Release.Namespace }}"
+  namespace: ibm-mq
 data:
   monitor_channels.sh: |
     #!/bin/bash
