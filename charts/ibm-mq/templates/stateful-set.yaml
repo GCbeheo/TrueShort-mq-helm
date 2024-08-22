@@ -257,13 +257,19 @@ spec:
           lifecycle:
             postStart:
               exec:
-                command: 
+                command:
                   - /bin/sh
                   - -c
                   - |
-                    # Wait for a few minutes to ensure the MQ server is fully initialized
-                    sleep 180  # Adjust as necessary (e.g., 3 minutes)
-
+                    # Wait until MQ server is ready
+                    echo "Waiting for MQ server to be ready..."
+                    while ! chkmqready; do
+                        echo "MQ server is not ready yet. Retrying in 10 seconds..."
+                        sleep 10
+                    done
+                    
+                    echo "MQ server is ready. Starting channel monitoring script..."
+                    
                     # Create the channel monitoring script
                     echo "#!/bin/bash
                     CHANNELS=(\"EQLSG1Q1.KSL.C1\" \"EQLSG1Q1.KSL.C2\" \"EQLSG2Q1.KSL.C1\" \"EQLSG2Q1.KSL.C2\")
@@ -279,9 +285,10 @@ spec:
                     done" > /var/mqm/monitor_channels.sh
                     
                     chmod +x /var/mqm/monitor_channels.sh
-
+                    
                     # Run the monitoring script in the background
                     /bin/bash /var/mqm/monitor_channels.sh &
+
           volumeMounts:
             - name: mq-data
               mountPath: /var/mqm
