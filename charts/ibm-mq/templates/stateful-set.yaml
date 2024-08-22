@@ -259,10 +259,6 @@ spec:
             - name: mq-monitor-script
               mountPath: /etc/mq-monitor/monitor_channels.sh
               subPath: monitor_channels.sh
-          volumes:
-            - name: mq-monitor-script
-              configMap:
-                name: mq-monitoring-script
           ports:
           - containerPort: 1414
           - containerPort: 9443
