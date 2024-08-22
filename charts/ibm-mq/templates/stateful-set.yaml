@@ -483,7 +483,6 @@ spec:
 {{ toYaml .Values.resources.limits | indent 14 }}
             requests:
 {{ toYaml .Values.resources.requests | indent 14 }}
-      {{- if .Values.security.initVolumeAsRoot }}
         - name: monitoring-sidecar
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -499,6 +498,7 @@ spec:
           - name: mq-monitoring-script
             mountPath: /var/mqm/monitor_channels.sh
             subPath: monitor_channels.sh
+      {{- if .Values.security.initVolumeAsRoot }}
       initContainers:
         - name: qmgr-init
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
