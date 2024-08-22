@@ -253,10 +253,49 @@ spec:
       containers:
         - name: qmgr
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           volumeMounts:
             - name: mqm-shared-volume
               mountPath: /var/mqm
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+          - /bin/sh
+          - -c
+          - |
+            # Start the MQ server in the background
+            runmqserver &
+
+            # Wait for the MQ queue manager to be fully initialized
+            while ! echo "DISPLAY QMSTATUS" | runmqsc KSLNONPRODMQ1 | grep -q "QMSTATUS"; do
+              echo "Waiting for the queue manager to start..."
+              sleep 10
+            done
+
+            echo "#!/bin/bash
+            QMGR=\"KSLNONPRODMQ1\"
+            CHANNELS=(\"EQLSG1Q1.KSL.C1\" \"EQLSG1Q1.KSL.C2\" \"EQLSG2Q1.KSL.C1\" \"EQLSG2Q1.KSL.C2\")
+            echo \"Starting channel monitoring...\"
+            for CHANNEL in \"\${CHANNELS[@]}\"; do
+                OUTPUT=\$(echo \"DISPLAY CHSTATUS(\$CHANNEL)\" | runmqsc \$QMGR)
+                echo \"Raw output for \$CHANNEL:\"
+                echo \"\$OUTPUT\"
+                if echo \"\$OUTPUT\" | grep -q \"AMQ8420I: Channel Status not found.\"; then
+                    echo \"Channel \$CHANNEL is inactive. Restarting...\"
+                    echo \"START CHANNEL(\$CHANNEL)\" | runmqsc \$QMGR
+                else
+                    echo \"Channel \$CHANNEL is active or in another state.\"
+                fi
+            done" > /var/mqm/monitor_channels.sh
+            
+            chmod +x /var/mqm/monitor_channels.sh
+            
+            # Run the monitoring script in a loop
+            while true; do
+              /bin/bash /var/mqm/monitor_channels.sh
+              sleep 300
+            done
+
+            # Wait for the MQ server to exit
+            wait
           terminationMessagePath: "/run/termination-log"
           ports:
           - containerPort: 1414
@@ -486,36 +525,6 @@ spec:
 {{ toYaml .Values.resources.limits | indent 14 }}
             requests:
 {{ toYaml .Values.resources.requests | indent 14 }}
-        - name: monitoring-sidecar
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          volumeMounts:
-            - name: mqm-shared-volume
-              mountPath: /var/mqm
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command:
-          - /bin/sh
-          - -c
-          - |
-            echo "#!/bin/bash
-            QMGR=\"KSLNONPRODMQ1\"
-            CHANNELS=(\"EQLSG1Q1.KSL.C1\" \"EQLSG1Q1.KSL.C2\" \"EQLSG2Q1.KSL.C1\" \"EQLSG2Q1.KSL.C2\")
-            echo \"Starting channel monitoring...\"
-            for CHANNEL in \"\${CHANNELS[@]}\"; do
-                OUTPUT=\$(echo \"DISPLAY CHSTATUS(\$CHANNEL)\" | runmqsc \$QMGR)
-                echo \"Raw output for \$CHANNEL:\"
-                echo \"\$OUTPUT\"
-                if echo \"\$OUTPUT\" | grep -q \"AMQ8420I: Channel Status not found.\"; then
-                    echo \"Channel \$CHANNEL is inactive. Restarting...\"
-                    echo \"START CHANNEL(\$CHANNEL)\" | runmqsc \$QMGR
-                else
-                    echo \"Channel \$CHANNEL is active or in another state.\"
-                fi
-            done" > /var/mqm/monitor_channels.sh
-            chmod +x /var/mqm/monitor_channels.sh
-            while true; do
-              /bin/bash /var/mqm/monitor_channels.sh
-              sleep 300
-            done
       {{- if .Values.security.initVolumeAsRoot }}
       initContainers:
         - name: qmgr-init
@@ -564,9 +573,6 @@ spec:
               drop:
                 - ALL
       {{- end }}
-  volumes:
-    - name: mqm-shared-volume
-      emptyDir: {}
   volumeClaimTemplates:
   {{- if and (.Values.persistence.dataPVC.enable) (eq .Values.queueManager.multiinstance.enable false) }}
   - metadata:
