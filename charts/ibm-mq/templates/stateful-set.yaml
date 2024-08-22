@@ -257,36 +257,35 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              # Start the MQ queue manager in the foreground
+              # Start the MQ queue manager in the foreground and wait for it to be fully initialized
               runmqserver &
-
-              # Wait for the MQ queue manager to be fully initialized
-              while ! echo "DISPLAY QMSTATUS" | runmqsc $QMGR | grep -q "QMSTATUS"; do
-                echo "Waiting for the queue manager to start..."
+              
+              # Wait until the MQ queue manager is fully running by checking for the "RUNNING" state
+              while ! echo "DISPLAY QMSTATUS($QMGR)" | runmqsc $QMGR | grep -q "RUNNING"; do
+                echo "Waiting for the queue manager to be fully initialized..."
                 sleep 10
               done
-
-              # Create and run the channel monitoring script
+              
+              # Create the channel monitoring script
               echo "#!/bin/bash
               CHANNELS=(\"EQLSG1Q1.KSL.C1\" \"EQLSG1Q1.KSL.C2\" \"EQLSG2Q1.KSL.C1\" \"EQLSG2Q1.KSL.C2\")
-              echo \"Starting channel monitoring...\"
               while true; do
-                  for CHANNEL in \"\${CHANNELS[@]}\"; do
-                      OUTPUT=\$(echo \"DISPLAY CHSTATUS(\$CHANNEL)\" | runmqsc \$QMGR)
-                      if echo \"\$OUTPUT\" | grep -q \"AMQ8420I: Channel Status not found.\"; then
-                          echo \"Channel \$CHANNEL is inactive. Restarting...\"
-                          echo \"START CHANNEL(\$CHANNEL)\" | runmqsc \$QMGR
-                      fi
-                  done
-                  sleep 300
+                for CHANNEL in \"\${CHANNELS[@]}\"; do
+                    OUTPUT=\$(echo \"DISPLAY CHSTATUS(\$CHANNEL)\" | runmqsc \$QMGR)
+                    if echo \"\$OUTPUT\" | grep -q \"AMQ8420I: Channel Status not found.\"; then
+                        echo \"Channel \$CHANNEL is inactive. Restarting...\"
+                        echo \"START CHANNEL(\$CHANNEL)\" | runmqsc \$QMGR
+                    fi
+                done
+                sleep 300
               done" > /var/mqm/monitor_channels.sh
               
               chmod +x /var/mqm/monitor_channels.sh
-
+              
               # Run the monitoring script in the background
               /bin/bash /var/mqm/monitor_channels.sh &
-
-              # Wait indefinitely to keep the container alive
+              
+              # Keep the container running indefinitely
               wait
           volumeMounts:
             - name: mq-data
