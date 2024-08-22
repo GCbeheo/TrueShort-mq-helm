@@ -502,7 +502,11 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           terminationMessagePath: "/run/termination-log"
-          command: ["runmqserver"]
+          command:
+            - sh
+            - -c
+            - |
+              chmod 777 /tmp && runmqserver -i
           args: ["-i"]
           env:
           - name: LICENSE
