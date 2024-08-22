@@ -254,37 +254,6 @@ spec:
         - name: qmgr
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          lifecycle:
-            postStart:
-              exec:
-                command: 
-                  - /bin/sh
-                  - -c
-                  - |
-                    # Wait for a few minutes to ensure the MQ server is fully initialized
-                    sleep 180  # Adjust as necessary (e.g., 3 minutes)
-
-                    # Create the channel monitoring script
-                    echo "#!/bin/bash
-                    CHANNELS=(\"EQLSG1Q1.KSL.C1\" \"EQLSG1Q1.KSL.C2\" \"EQLSG2Q1.KSL.C1\" \"EQLSG2Q1.KSL.C2\")
-                    while true; do
-                      for CHANNEL in \"\${CHANNELS[@]}\"; do
-                          OUTPUT=\$(echo \"DISPLAY CHSTATUS(\$CHANNEL)\" | runmqsc \$QMGR)
-                          if echo \"\$OUTPUT\" | grep -q \"AMQ8420I: Channel Status not found.\"; then
-                              echo \"Channel \$CHANNEL is inactive. Restarting...\"
-                              echo \"START CHANNEL(\$CHANNEL)\" | runmqsc \$QMGR
-                          fi
-                      done
-                      sleep 300  # Repeat every 5 minutes
-                    done" > /var/mqm/monitor_channels.sh
-                    
-                    chmod +x /var/mqm/monitor_channels.sh
-
-                    # Run the monitoring script in the background
-                    /bin/bash /var/mqm/monitor_channels.sh &
-          volumeMounts:
-            - name: mq-data
-              mountPath: /var/mqm
           terminationMessagePath: "/run/termination-log"
           ports:
           - containerPort: 1414
