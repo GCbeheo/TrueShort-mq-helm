@@ -491,13 +491,26 @@ spec:
           - -c
           - |
             while true; do
-              /bin/bash /var/mqm/monitor_channels.sh
+              #!/bin/bash
+              QMGR="KSLNONPRODMQ1"
+              CHANNELS=("EQLSG1Q1.KSL.C1" "EQLSG1Q1.KSL.C2" "EQLSG2Q1.KSL.C1" "EQLSG2Q1.KSL.C2")
+
+              echo "Starting channel monitoring..."
+
+              for CHANNEL in "${CHANNELS[@]}"; do
+                  OUTPUT=$(echo "DISPLAY CHSTATUS($CHANNEL)" | runmqsc $QMGR)
+                  echo "Raw output for $CHANNEL:"
+                  echo "$OUTPUT"
+
+                  if echo "$OUTPUT" | grep -q "AMQ8420I: Channel Status not found."; then
+                      echo "Channel $CHANNEL is inactive. Restarting..."
+                      echo "START CHANNEL($CHANNEL)" | runmqsc $QMGR
+                  else
+                      echo "Channel $CHANNEL is active or in another state."
+                  fi
+              done
               sleep 300
             done
-          volumeMounts:
-          - name: mq-monitoring-script
-            mountPath: /var/mqm/monitor_channels.sh
-            subPath: monitor_channels.sh
       {{- if .Values.security.initVolumeAsRoot }}
       initContainers:
         - name: qmgr-init
@@ -546,10 +559,6 @@ spec:
               drop:
                 - ALL
       {{- end }}
-  volumes:
-    - name: mq-monitoring-script
-      configMap:
-        name: mq-monitoring-script
   volumeClaimTemplates:
   {{- if and (.Values.persistence.dataPVC.enable) (eq .Values.queueManager.multiinstance.enable false) }}
   - metadata:
