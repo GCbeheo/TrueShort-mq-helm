@@ -491,7 +491,6 @@ spec:
                   - -c
                   - |
                     echo "PostStart Hook Running" >> /tmp/poststart.log` 2>&1
-                    # Your existing commands...
                     echo "PostStart Hook Completed" >> /tmp/poststart.log 2>&1
       {{- if .Values.security.initVolumeAsRoot }}
       initContainers:
